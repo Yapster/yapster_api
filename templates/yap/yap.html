@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Yapster - @{{yap.user.username}}/{{yap.pk}}/{{yap.title}}</title>
+    {% load staticfiles %}
+    <link rel="stylesheet" type="text/css" href="{% static 'yap/css/yap_default.css' %}"/>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdnjs.cl
+    oudflare.com/ajax/libs/moment.js/2.8.1/moment.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.2.1/moment-timezone.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jstimezonedetect/1.0.4/jstz.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jplayer/2.6.4/jquery.jplayer/jquery.jplayer.min.js"></script>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta name=“viewport” content=“width=640”>
+</head>
+<body>
+<div id="header" class="tiny_able">
+    <a href="http://www.yapster.co/" target="_blank">
+        <div id="logo_container" class="tiny_able">
+            <span id="logo" class="icon tiny_able"></span>
+        </div>
+    </a>
+    <a href="https://itunes.apple.com/us/app/yapster/id899766051" target="_blank">
+        <div id="app_store_icon_container" class="tiny_able">
+            <span id="app_store_icon" class="icon tiny_able">Download App</span>
+        </div>
+    </a>
+</div>
+<div id="content" class="thinable tiny_able wide_able">
+    <div id="main_content">
+        <div id="player_container" class="thinable tiny_able">
+            <div id="profile_card" class="thinable tiny_able">
+                <div id="profile_pix_container">
+                    {% if yap_user_profile_picture_cropped_url %}
+                        <img id="profile_pix" src="{{yap_user_profile_picture_cropped_url}}"/>
+                    {% else %}
+                        <div id="icon_default_pix" class="icon"></div>
+                    {% endif %}
+                </div>
+                <div id="user_info">
+                    <div id="first_line">
+                        <span id="name">{{yap.user.first_name}} {{yap.user.last_name}}</span>
+                        <span id="date">{{yap_date}}</span>
+                    </div>
+                    <div id="second_line">
+                        <span id="username">@{{yap.user.username}}</span>
+                    </div>
+                    <div id="third_line">
+                        <span id="description">{{yap.title}}</span>
+                    </div>
+                </div>
+                <div id="icone_line">
+                    <div class="stats">
+                        <span id="icon_listen" class="icon stats_icon"></span>
+                        <span class="stats_text">{{yap.listen_count}}</span>
+                    </div>
+                    <div class="stats">
+                        <span id="icon_reyap" class="icon stats_icon"></span>
+                        <span class="stats_text">{{yap.reyap_count}}</span>
+                    </div>
+                    <div class="stats">
+                        <span id="icon_like_text" class="stats_text">{{yap.like_count}}</span>
+                        <span id="icon_like" class="icon stats_icon"></span>
+                    </div>
+                </div>
+                <div id="player">
+                    <div id="control_panel">
+                        <input type="hidden" value="{{ yap_audio_url }}" id="yap_audio_url"/>
+                        <div id="jquery_jplayer_1" class="jp-jplayer"></div>
+                        <div id="jp_container_1" class="jp-audio">
+                            <div class="jp-type-single">
+                                <div class="jp-gui jp-interface">
+                                    <div class="jp-progress">
+                                        <div class="jp-seek-bar">
+                                            <div class="jp-play-bar"></div>
+                                        </div>
+                                    </div>
+                                    <div class="second_column_class">
+                                        <div class="jp-current-time">
+                                        </div>
+                                        <div class="jp-duration">
+                                        </div>
+                                        <div class="jp-controls">
+                                            <span class="jp-play"><a href="javascript:;" tabindex="1"></a></span>
+                                            <span class="jp-pause"><a href="javascript:;"  tabindex="1"></a></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="jp-no-solution">
+                                    <span>Update Required</span>
+                                    To play the media you will need to either update your browser to a recent version or update your <a href="http://get.adobe.com/flashplayer/" target="_blank">Flash plugin</a>.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="more_info_yap" >
+                <div id="more_info" class="thinable tiny_able">
+                    {% if yap.description %}
+                        <span id="description">{{ yap.description }}</span>
+                    {% endif %}
+                </div>
+                <div id="yap_picture_container" class="thinable tiny_able">
+                    {% if yap_picture_url %}
+                        <img id="yap_picture" src="{{yap_picture_url}}"/>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div id="slideshow_container" class="thinable tiny_able" style="display: none">
+            <img id="slideshow_image1" class="slideshow_image" src="{% static 'yap/images/yapster_slideshow1.jpg' %}" style="display: initial"/>
+            <img id="slideshow_image2" class="slideshow_image" src="{% static 'yap/images/yapster_slideshow2.jpg' %}"/>
+            <img id="slideshow_image3" class="slideshow_image" src="{% static 'yap/images/yapster_slideshow3.jpg' %}"/>
+            <img id="slideshow_image4" class="slideshow_image" src="{% static 'yap/images/yapster_slideshow4.jpg' %}"/>
+        </div>
+    </div>
+</div>
+<script type="text/javascript" src="{% static 'yap/js/yap.js' %}"></script>
+</body>
+</html>
