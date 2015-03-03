@@ -495,11 +495,11 @@ class SubscribeUser(models.Model):
 
 	def unsubscribe(self):
 		self.is_unsubscribed = True
-		if not self.date_unfollowed:
-			self.date_unfollowed = datetime.datetime.now()
+		if not self.date_unsubscribed:
+			self.date_unsubscribed = datetime.datetime.now()
 			self.is_user_deleted = False
 			self.is_active = False
-			self.save(update_fields=['date_unfollowed','is_unsubscribed','is_active'])
+			self.save(update_fields=['date_unsubscribed','is_unsubscribed','is_active'])
 			self.user.profile.subscribing_users_count -= 1
 			self.user.profile.save(update_fields=['subscribing_users_count'])
 			self.subscribed_user.profile.subscriber_users_count -= 1
@@ -578,11 +578,11 @@ class SubscribeLibrary(models.Model):
 
 	def unsubscribe(self):
 		self.is_unsubscribed = True
-		if not self.date_unfollowed:
-			self.date_unfollowed = datetime.datetime.now()
+		if not self.date_unsubscribed:
+			self.date_unsubscribed = datetime.datetime.now()
 			self.is_user_deleted = False
 			self.is_active = False
-			self.save(update_fields=['date_unfollowed','is_unsubscribed','is_active'])
+			self.save(update_fields=['date_unsubscribed','is_unsubscribed','is_active'])
 			self.user.profile.subscribing_libraries_count -= 1
 			self.user.profile.save(update_fields=['subscribing_libraries_count'])
 			self.subscribed_library.subscriber_users_count -= 1
@@ -764,7 +764,6 @@ class Dashboard(models.Model):
 			return 'This FollowerRequest is already activated.'
 
 	def recalculate_subscribed_most_listened_users(self):
-		print "here in function"
 		self.subscribed_most_listened_users.clear()
 		listen_exists = Listen.objects.filter(user=self.user,is_active=True).exists()
 		users_subscribed_to = self.user.subscribe_user_user.filter(is_active=True)
@@ -774,7 +773,7 @@ class Dashboard(models.Model):
 		else:
 			key = lambda *args: random.random()
 			reverse = False
-		users_to_add_into_subscribed_most_listened_users = sorted(set(users_subscribed_to),key=key, reverse=reverse)[:5]
+		users_to_add_into_subscribed_most_listened_users = sorted(set(users_subscribed_to),key=key, reverse=reverse)[:3]
 		for user_to_add_into_subscribed_most_listened_users in users_to_add_into_subscribed_most_listened_users:
 			self.subscribed_most_listened_users.add(user_to_add_into_subscribed_most_listened_users.subscribed_user)
 		self.date_calculated_subscribed_most_listened_users = datetime.datetime.now()
@@ -790,20 +789,20 @@ class Dashboard(models.Model):
 		else:
 			key = lambda *args: random.random()
 			reverse = False
-		libraries_to_add_into_subscribed_most_listened_libraries = sorted(set(libraries_subscribed_to),key=key, reverse=reverse)[:5]
+		libraries_to_add_into_subscribed_most_listened_libraries = sorted(set(libraries_subscribed_to),key=key, reverse=reverse)[:3]
 		for library_to_add_into_subscribed_most_listened_libraries in libraries_to_add_into_subscribed_most_listened_libraries:
 			self.subscribed_most_listened_libraries.add(library_to_add_into_subscribed_most_listened_libraries.subscribed_library)
 		self.date_calculated_subscribed_most_listened_libraries = datetime.datetime.now()
 		self.save(update_fields=['date_calculated_subscribed_most_listened_libraries'])
 
 	def check_date_calculated_subscribed_most_listened_users(self):
-		if (timezone.now() - self.date_calculated_subscribed_most_listened_users).days >= 0:
+		if (timezone.now() - self.date_calculated_subscribed_most_listened_users).seconds >= 43200:
 			return False
 		else:
 			return True
 
 	def check_date_calculated_subscribed_most_listened_libraries(self):
-		if (timezone.now() - self.date_calculated_subscribed_most_listened_libraries).days >= 0:
+		if (timezone.now() - self.date_calculated_subscribed_most_listened_libraries).seconds >= 43200:
 			return False
 		else:
 			return True
@@ -814,7 +813,7 @@ class Dashboard(models.Model):
 		self.explore_top_users.clear()
 		minutes = 2880
 		time = datetime.datetime.now() - datetime.timedelta(minutes=minutes)
-		yaps = Yap.objects.filter(is_active=True,is_private=False,date_created__gte=time)
+		yaps = Yap.objects.filter(is_active=True,date_created__gte=time)
 		users = User.objects.filter(yaps__in=yaps,is_active=True)
 		if self.user.listens.filter(is_active=True).exists() == True:
 			key = listening_score_for_users
@@ -822,7 +821,7 @@ class Dashboard(models.Model):
 		else:
 			key = lambda *args: random.random()
 			reverse = False
-		users_to_add_into_explore_top_users = sorted(set(users),key=key, reverse=reverse)[:5]
+		users_to_add_into_explore_top_users = sorted(set(users),key=key, reverse=reverse)[:3]
 		for user_to_add_into_explore_top_users in users_to_add_into_explore_top_users:
 			self.explore_top_users.add(user_to_add_into_explore_top_users)
 		self.date_calculated_explore_top_users = datetime.datetime.now()
@@ -832,28 +831,28 @@ class Dashboard(models.Model):
 		self.explore_top_libraries.clear()
 		minutes = 2880
 		time = datetime.datetime.now() - datetime.timedelta(minutes=minutes)
-		yaps = Yap.objects.filter(is_active=True,is_private=False,date_created__gte=time)
+		yaps = Yap.objects.filter(is_active=True,date_created__gte=time)
 		libraries = Library.objects.filter(yaps__in=yaps,is_active=True)
-		if self.user.listens.filter(is_active=True).exists == True:
+		if self.user.listens.filter(is_active=True).exists() == True:
 			key = listening_score_for_libraries
 			reverse = True
 		else:
 			key = lambda *args: random.random()
 			reverse = False
-		libraries_to_add_into_explore_top_libraries = sorted(set(libraries),key=key,reverse=reverse)[:5]
+		libraries_to_add_into_explore_top_libraries = sorted(set(libraries),key=key,reverse=reverse)[:3]
 		for library_to_add_into_explore_top_libraries in libraries_to_add_into_explore_top_libraries:
 			self.explore_top_libraries.add(library_to_add_into_explore_top_libraries)
 		self.date_calculated_explore_top_libraries = datetime.datetime.now()
 		self.save(update_fields=['date_calculated_explore_top_libraries'])
 
 	def check_date_calculated_explore_top_users(self):
-		if (timezone.now() - self.date_calculated_explore_top_users).days >= 1:
+		if (timezone.now() - self.date_calculated_explore_top_users).seconds >= 43200:
 			return False
 		else:
 			return True
 
 	def check_date_calculated_explore_top_libraries(self):
-		if (timezone.now() - self.date_calculated_explore_top_libraries).days >= 1:
+		if (timezone.now() - self.date_calculated_explore_top_libraries).seconds >= 43200:
 			return False
 		else:
 			return True

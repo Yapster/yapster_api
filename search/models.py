@@ -4,13 +4,11 @@ from django.contrib.auth.models import User
 from itertools import chain
 from operator import attrgetter
 from yap.models import *
-from stream.models import *
-from yapster_utils import yap_trending_score
-import users.signals as user_signals
 from django.contrib.gis.db import models
+from django.db.models import Q
 
 class Search(models.Model):
-	user_searching = models.ForeignKey(User,related_name="searches")
+	user = models.ForeignKey(User,related_name="searches", null=True,blank=True)
 	origin_dashboard_subscribed_screen_flag = models.BooleanField(default=False)
 	origin_dashboard_explore_screen_flag = models.BooleanField(default=False)
 	origin_dashboard_channel_screen_flag = models.BooleanField(default=False)
@@ -18,45 +16,56 @@ class Search(models.Model):
 	origin_profile_screen_flag = models.BooleanField(default=False)
 	origin_profile_searched = models.ForeignKey(User, related_name="in_searches",blank=True,null=True)
 	origin_library_screen_searched_flag = models.BooleanField(default=False)
-	origin_library_searched = models.ForeignKey(User, related_name="in_searches",blank=True,null=True)
-	hashtags_searched_flag = models.BooleanField(default=False)
-	channels_searched_flag = models.BooleanField(default=False)
-	user_handles_searched_flag = models.BooleanField(default=False)
-	general_searched_flag = models.BooleanField(default=False)
-	text_searched = models.CharField(max_length=255)
+	origin_library_searched = models.ForeignKey(Library, related_name="in_searches",blank=True,null=True)
+	origin_web_screen_searched_flag = models.BooleanField(default=False)
+	text = models.CharField(max_length=255)
 	latitude = models.FloatField(null=True,blank=True)
 	longitude = models.FloatField(null=True,blank=True)
 	point = models.PointField(srid=4326,null=True,blank=True)
 	is_after_request = models.BooleanField(default=False)
-	is_trending = models.BooleanFåield(default=False)
+	is_trending = models.BooleanField(default=False)
 	is_recent = models.BooleanField(default=False)
 	date_created = models.DateTimeField(auto_now_add=True)
 	is_active = models.BooleanField(default=True)
 	objects = models.GeoManager()
 
 	class Meta:
-		ordering = ['-date_searched']
+		ordering = ['-date_created']
 
 
-def default_user_handle_search(self,user,amount,after=None):
-	number_of_words_searched = len(self.text_searched)
-	if len(number_of_words_searched > 0)
-		user_search_results = User.objects.filter(username=self.text_searched)
-		if len(user_search_results) > 0:
-			search_results = sorted(set(user_search_results),key=attrgetter('username'), reverse=False)[:amount]
+	def default_user_search(self,amount=None):
+		# users = User.objects.filter(is_active=True)
+		# search_results_1 = users.filter(first_name__istartswith=self.text)
+		# search_results_2 = users.filter(last_name__istartswith=self.text)
+		# search_results_3 = users.filter(username__istartswith=self.text)
+		# search_result_list = set(chain(search_results_1,search_results_2,search_results_3))
+		if amount == None:
+			search_results_list = User.objects.filter((Q(first_name__istartswith=self.text) | Q(last_name__istartswith=self.text) | Q(username__istartswith=self.text)),is_active=True)
 		else:
-			return "There are no yps that match this match."
+			search_results_list = User.objects.filter((Q(first_name__istartswith=self.text) | Q(last_name__istartswith=self.text) | Q(username__istartswith=self.text)),is_active=True)[:amount]
+		return search_results_list
 
-def default_user_name_search(self,user,amount,after=None):
+	def default_library_search(self,amount=None):
+		# libraries = Library.objects.filter(is_active=True)
+		# search_results_1 = libraries.filter(title__icontains=self.text)
+		# search_results_2 = libraries.filter(description__icontains=self.text)
+		# search_result_list = set(chain(search_results_1,search_results_2))
+		if amount == None:
+			search_results_list = Library.objects.filter((Q(title__icontains=self.text) | Q(description__icontains=self.text)),is_active=True)
+		else:
+			search_results_list = Library.objects.filter((Q(title__icontains=self.text) | Q(description__icontains=self.text)),is_active=True)[:amount]
+		return search_results_list
 
-	user_search_results = User.objects.filter(username=self.text_searched)
-	if len(user_search_results) > 0:
-		search_results = sorted(set(user_search_results),key=attrgetter('username'), reverse=False)[:amount]
-	else:
-		return "There are no yps that match this match."
-
-
-
+	def default_yap_search(self,amount=None):
+		# libraries = Library.objects.filter(is_active=True)
+		# search_results_1 = libraries.filter(title__icontains=self.text)
+		# search_results_2 = libraries.filter(description__icontains=self.text)
+		# search_result_list = set(chain(search_results_1,search_results_2))
+		if amount == None:
+			search_results_list = Yap.objects.filter((Q(title__icontains=self.text) | Q(description__icontains=self.text)),is_active=True)
+		else:
+			search_results_list = Yap.objects.filter((Q(title__icontains=self.text) | Q(description__icontains=self.text)),is_active=True)[:amount]
+		return search_results_list
 
 
 # #Explore Hashtags Search ---------------------------------------------------------------------------------------------------------------------------------------

@@ -1,41 +1,8 @@
 from rest_framework import serializers
 from users.models import *
 from location.serializers import *
-from yap.serializers import YapSerializer, LibrarySerializer,LibraryOrderSerializer,LibraryPreviewOrderSerializer
+from yap.serializers import *
 from django.contrib.auth.models import User
-
-class UserSerializer(serializers.ModelSerializer):
-
-	profile_picture_path = serializers.SerializerMethodField('get_profile_picture_path')
-	profile_cropped_picture_path = serializers.SerializerMethodField('get_profile_cropped_picture_path')
-
-	class Meta:
-		model = User
-		fields = ("username","first_name","last_name","id","profile_picture_path","profile_cropped_picture_path")
-
-	def get_profile_picture_path(self,obj):
-		return obj.profile.profile_picture_path
-
-	def get_profile_cropped_picture_path(self,obj):
-		return obj.profile.profile_picture_cropped_path
-
-class ListUserSerializer(serializers.ModelSerializer):
-
-	profile_picture_path = serializers.SerializerMethodField("get_profile_picture_path")
-	profile_cropped_picture_path = serializers.SerializerMethodField("get_profile_cropped_picture_path")
-	profile_description = serializers.SerializerMethodField("get_profile_description")
-
-	class Meta:
-		model = User
-		fields = ("username","first_name","last_name","id","profile_picture_path","profile_cropped_picture_path","profile_description")
-
-	def get_profile_picture_path(self,obj):
-		return obj.profile.profile_picture_cropped_path
-	def get_profile_cropped_picture_path(self,obj):
-		return obj.profile.profile_picture_cropped_path
-
-	def get_profile_description(self,obj):
-		return obj.profile.description
 
 
 class SettingsSerializer(serializers.ModelSerializer):
@@ -44,26 +11,45 @@ class SettingsSerializer(serializers.ModelSerializer):
 		model = Settings
 		exclude = ['is_active','is_user_deleted','manual_override','manual_override_description']
 
-class ProfileInfoSerializer(serializers.ModelSerializer):
-	user = UserSerializer(partial=True) #not return all info in this
-	viewing_user_subscribed_to_profile_viewed = serializers.SerializerMethodField("get_viewing_user_subscribed_to_profile_viewed")
-	city = CitySerializer()
-	country = CountrySerializer()
-	us_state = USStateSerializer()
-	us_zip_code = USZIPCodeSerializer()
-	facebook_connection_flag = serializers.SerializerMethodField("get_facebook_connection_flag")
-	facebook_account_id = serializers.SerializerMethodField("get_facebook_account_id")
-	facebook_page_connection_flag = serializers.SerializerMethodField("get_facebook_page_connection_flag")
-	facebook_page_id = serializers.SerializerMethodField("get_facebook_page_id")
-	twitter_connection_flag = serializers.SerializerMethodField("get_twitter_connection_flag")
-	twitter_account_id = serializers.SerializerMethodField("get_twitter_account_id")
-	last_yap_user_yap_id = serializers.SerializerMethodField("get_last_yap_user_yap_id")
+class ProfileSerializer(serializers.ModelSerializer):
+	user = UserSerializer()
+	city = serializers.SerializerMethodField("get_city_name")
+	country = serializers.SerializerMethodField("get_country_name")
+	us_state = serializers.SerializerMethodField("get_us_state_name")
+	us_zip_code = serializers.SerializerMethodField("get_us_zip_code")
+	viewing_user_subscribed_to_user = serializers.SerializerMethodField("get_viewing_user_subscribed_to_user")
+	viewing_user_is_user_flag = serializers.SerializerMethodField("get_viewing_user_is_user_flag")
+	viewing_user_is_user_extra_info = serializers.SerializerMethodField("get_viewing_user_is_user_extra_info")
 
 	class Meta:
 		model = Profile
 		exclude = ['is_active','is_user_deleted','manual_override','manual_override_description']
 
-	def get_viewing_user_subscribed_to_profile_viewed(self,obj):
+	def get_city_name(self,obj):
+		if obj.city != None:
+			return obj.city.name
+		else:
+			return None
+
+	def get_country_name(self,obj):
+		if obj.country != None:
+			return obj.country.name
+		else:
+			return None
+
+	def get_us_state_name(self,obj):
+		if obj.us_state != None:
+			return obj.us_state.name
+		else:
+			return None
+
+	def get_us_zip_code(self,obj):
+		if obj.us_zip_code != None:
+			return obj.us_zip_code.name
+		else:
+			return None
+
+	def get_viewing_user_subscribed_to_user(self,obj):
 		user = self.context['user']
 		if obj.user.pk == user.pk:
 			return None
@@ -74,33 +60,25 @@ class ProfileInfoSerializer(serializers.ModelSerializer):
 			else:
 				return False
 
-	def get_facebook_connection_flag(self,obj):
-		return obj.user.settings.facebook_connection_flag
-	def get_facebook_account_id(self,obj):
-		if obj.user.settings.facebook_connection_flag == True:
-			return obj.user.settings.facebook_account_id
-		else:
-			return None
-	def get_facebook_page_connection_flag(self,obj):
-		return obj.user.settings.facebook_page_connection_flag
-	def get_facebook_page_id(self,obj):
-		if obj.user.settings.facebook_page_connection_flag == True:
-			return obj.user.settings.facebook_page_id
-		else:
-			return None
-	def get_twitter_connection_flag(self,obj):
-		return obj.user.settings.twitter_connection_flag
-	def get_twitter_account_id(self,obj):
-		if obj.user.settings.twitter_connection_flag == True:
-			return obj.user.settings.twitter_account_id
-		else:
-			return None
-	def get_last_yap_user_yap_id(self,obj):
+	def get_viewing_user_is_user_flag(self,obj):
 		user = self.context['user']
-		if obj.user.pk == user.pk:
-			return user.functions.last_yap_user_yap_id()
+		if user == None:
+			return False
 		else:
-			return None
+			if obj.user.pk == user.pk:
+				return True
+			else:
+				return False
+
+	def get_viewing_user_is_user_extra_info(self,obj):
+		user = self.context['user']
+		if user == None:
+			return False
+		else:
+			if obj.user.pk == user.pk:
+				return None
+			else:
+				return {"facebook_connection_flag":obj.user.settings.facebook_connection_flag, "facebook_account_id":obj.user.settings.facebook_account_id,"facebook_page_connection_flag":obj.user.settings.facebook_page_connection_flag,"facebook_page_id":obj.user.settings.facebook_page_id, "twitter_connection_flag":obj.user.settings.twitter_connection_flag, "twitter_account_id":obj.user.settings.twitter_account_id,"last_yap_user_yap_id":user.functions.last_yap_user_yap_id()}
 
 
 class EditProfileInfoSerializer(serializers.ModelSerializer):
@@ -126,31 +104,42 @@ class UserAccountInfo(serializers.ModelSerializer):
 	def get_settings(self,obj):
 		return SettingsSerializer(obj.settings).data
 
+# class LibraryPreviewOrderSerializer(serializers.ModelSerializer):
+# 	library = serializers.SerializerMethodField("get_library")
+# 	class Meta:
+# 		model = LibraryOrder
+# 		fields = ["library","order"]
 
-class ProfileSerializer(serializers.ModelSerializer):
-	profile_info = serializers.SerializerMethodField("get_profile_info")
-	library_order = serializers.SerializerMethodField("get_library_order")
-
-	class Meta:
-		model = User
-		fields = ("profile_info","library_order")
-
-	def get_profile_info(self,obj):
-		return ProfileInfoSerializer(obj.profile,context={'user':self.context['user']}).data
-
-	def get_library_order(self,obj):
-		return LibraryPreviewOrderSerializer((obj.library_order.filter(is_active=True,order__lt=5)[:5]),context={'user':self.context['user']}).data
+# 	def get_library(self,obj):
+# 		return LibraryPreviewSerializer(obj.library,context={'user':self.context['user'],'include_library_profile':self.context['include_library_profile']}).data
 
 
-class SubscribedUserSerializer(serializers.ModelSerializer):
-	subscribed_user = serializers.SerializerMethodField("get_subscribed_user_profile")
+# class LibraryPreviewSerializer(serializers.ModelSerializer):
+# 	user = serializers.SerializerMethodField("get_profile")
+# 	library_yap_order = serializers.SerializerMethodField("get_library_yap_order")
+# 	viewing_user_subscribed_to_library = serializers.SerializerMethodField("get_viewing_user_subscribed_to_library")
 
-	class Meta:
-		model = User
-		fields = ("subscribed_user",)
+# 	class Meta:
+# 		model = Library
+# 		exclude = ["is_active","is_user_deleted","date_edited","date_deleted","geographic_target_flag","geographic_target","is_promoted","yaps"]
 
-	def get_subscribed_user_profile(self,obj):
-		return ProfileSerializer(obj,context={'user':self.context['user']}).data
+# 	def get_profile(self,obj):
+# 			if self.context['include_library_profile'] == True:
+# 				return ProfileSerializer(obj.user, context={'user':self.context['user'], 'include_library_profile':False}).data
+# 			else:
+# 				return UserSerializer(obj.user, context={'user':self.context['user'], 'include_library_profile':False}).data
+
+# 	def get_library_yap_order(self,obj):
+# 		user = self.context['user']
+# 		return LibraryYapOrderSerializer(obj.library_yap_order.filter(is_active=True)[:5], context={'user':user}).data
+
+# 	def get_viewing_user_subscribed_to_library(self,obj):
+# 		library_id = obj.pk
+# 		user = self.context['user']
+# 		if user.subscribed_libraries.filter(pk=library_id).exists() == True:
+# 			return True
+# 		else:
+# 			return False
 
 
 

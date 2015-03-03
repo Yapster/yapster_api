@@ -13,6 +13,46 @@ import twitter as twitter
 from operator import attrgetter
 from yap.scripts import create_yap,create_library
 import dateutil.parser
+import random
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+class LoadLibraryInfo(APIView):
+
+	def post(self,request,format=None):
+		request = {k:v for k,v in request.DATA.iteritems()}
+		user = User.objects.get(pk=request.pop('user_id'))
+		check = check_session(user,request.pop('session_id'))
+		if check[1]:
+			library = Library.objects.get(pk=request.get('library_id'))
+			serialized = LibraryPreviewSerializer(library,many=False,data=self.request.DATA,context={'user':user})
+			return Response({"valid":True,"data":serialized.data})
+		else:
+			return Response({"valid":False,"message":check[0]})
+
+class LoadLibraryYaps(APIView):
+
+	def post(self,request,format=None):
+		request = {k:v for k,v in request.DATA.iteritems()}
+		user = User.objects.get(pk=request.pop('user_id'))
+		check = check_session(user,request.pop('session_id'))
+		if check[1]:
+			library = Library.objects.get(pk=request['library_id'])
+			page = request.get('page',1)
+			amount = request.get('amount',5)
+			yaps_list = [yp_order.yap for yp_order in library.library_yap_order.filter(is_active=True).order_by('-order')][:amount]
+			paginator = Paginator(object_list=yaps_list,per_page=amount,allow_empty_first_page=False)
+			try:
+				yaps = paginator.page(page)
+			except PageNotAnInteger:
+				# If page is not an integer, deliver first page.
+				return Response({"valid":False,"message":"Page is not an integer."})
+			except EmptyPage:
+				# If page is out of range (e.g. 9999), deliver last page of results.
+				return Response({"valid":True,"data":None})
+			serialized = AbstractYapSerializer(yaps,many=True,data=self.request.DATA,context={'user':user})
+			return Response({"valid":True,"data":serialized.data})
+		else:
+			return Response({"valid":False,"message":check[0]})
 
 class CreateYap(APIView):
 	def post(self,request):
@@ -90,8 +130,13 @@ class SubscribeUser(APIView):
 		user = User.objects.get(pk=kwargs.pop('user_id'))
 		check = check_session(user=user,session_id=kwargs.pop('session_id'))
 		if check[1]:
-			subscribing_user_id = kwargs.get('subscribing_user_id')
-			response = user.functions.subscribe_user(subscribing_user_id=subscribing_user_id)
+			user_to_subscribe = User.objects.get(pk=kwargs.get('user_2_id'))
+			if user_to_subscribe == user:
+				return Response({"valid":False, "message":"You cannot subscribe yourself."})
+			response = user.functions.subscribe_user(user_to_subscribe=user_to_subscribe)
+			if isinstance(response,str):
+				return Response({"valid":False,"message":response})
+			else:
 			# subscribed_user = User.objects.get(pk=kwargs.get('user_subscribing_id'))
 			# subscribe_user = SubscribeUser.objects.get(user=user,subscribed_user=subscribed_user,is_active=True)
 			# if follower_request.is_accepted == True:
@@ -99,9 +144,9 @@ class SubscribeUser(APIView):
 			# 		if 'facebook_shared_flag' in kwargs:
 			# 			if kwargs.get('facebook_shared_flag') == True:
 			# 				facebook_shared_story = facebook.share_new_following_story_on_facebook(user=user,user_followed=user_requested,facebook_access_token=kwargs.get('facebook_access_token'))
-			return Response({"valid":True,"message":response})
+				return Response({"valid":True,"data":None})
 		else:
-			return Response(check[0])
+			return Response({"valid":False,"message":check[0]})
 
 class SubscribeLibrary(APIView):
 	def post(self,request):
@@ -109,8 +154,13 @@ class SubscribeLibrary(APIView):
 		user = User.objects.get(pk=kwargs.pop('user_id'))
 		check = check_session(user=user,session_id=kwargs.pop('session_id'))
 		if check[1]:
-			subscribing_library_id = kwargs.get('subscribing_library_id')
-			response = user.functions.subscribe_library(subscribing_library_id=subscribing_library_id)
+			library = Library.objects.get(pk=kwargs.get('library_id'))
+			if library.user == user:
+				return Response({"valid":False, "message":"You cannot subscribe your own library."})
+			response = user.functions.subscribe_library(library=library)
+			if isinstance(response,str):
+				return Response({"valid":False,"message":response})
+			else:
 			# subscribed_user = User.objects.get(pk=kwargs.get('user_subscribing_id'))
 			# subscribe_user = SubscribeUser.objects.get(user=user,subscribed_user=subscribed_user,is_active=True)
 			# if follower_request.is_accepted == True:
@@ -118,9 +168,9 @@ class SubscribeLibrary(APIView):
 			# 		if 'facebook_shared_flag' in kwargs:
 			# 			if kwargs.get('facebook_shared_flag') == True:
 			# 				facebook_shared_story = facebook.share_new_following_story_on_facebook(user=user,user_followed=user_requested,facebook_access_token=kwargs.get('facebook_access_token'))
-			return Response({"valid":True,"message":response})
+				return Response({"valid":True,"data":None})
 		else:
-			return Response(check[0])
+			return Response({"valid":False,"message":check[0]})
 
 class UnsubscribeUser(APIView):
 
@@ -129,26 +179,32 @@ class UnsubscribeUser(APIView):
 		user = User.objects.get(pk=kwargs['user_id'])
 		check = check_session(user=user,session_id=kwargs['session_id'])
 		if check[1]:
-			#print user.functions
-			response = user.functions.unsubscribe_user(kwargs['unsubscribing_user_id'])
-			return Response({"valid":True,"message":response})
+			user_to_unsubscribe = User.objects.get(pk=kwargs.get('user_2_id'))
+			if user_to_unsubscribe == user:
+				return Response({"valid":False, "message":"You cannot subscribe or unsubscribe yourself."})
+			response = user.functions.unsubscribe_user(user_to_unsubscribe)
+			if isinstance(response,str):
+				return Response({"valid":False,"message":response})
+			else:
+				return Response({"valid":True,"data":None})
 		else:
-			return Response(check[0])
+			return Response({"valid":False,"message":check[0]})
 
 
 class UnsubscribeLibrary(APIView):
 
 	def post(self,request):
 		kwargs = {k:v for k,v in request.DATA.iteritems()}
-
 		user = User.objects.get(pk=kwargs['user_id'])
 		check = check_session(user=user,session_id=kwargs['session_id'])
 		if check[1]:
-			#print user.functions
-			response = user.functions.follow_accept(kwargs['unsubscribing_library_id'])
-			return Response({"valid":True,"message":response})
+			response = user.functions.unsubscribe_library(kwargs['library_id'])
+			if isinstance(response,str):
+				return Response({"valid":False,"message":response})
+			else:
+				return Response({"valid":True,"data":None})
 		else:
-			return Response(check[0])
+			return Response({"valid":False,"message":check[0]})
 
 
 class Listen(APIView):
@@ -195,9 +251,9 @@ class ListenSetTimeListened(APIView):
 		if check[1]:
 			listen = Listen.objects.get(pk=kwargs['listen_id'])
 			response = listen.set_time_listened(time_listened=kwargs['time_listened'])
-			return Response({"valid":True,"message":"success","listen_id":listen.pk})
+			return Response({"valid":True,"data":None})
 		else:
-			return Response(check[0])
+			return Response({"valid":False,"message":check[0]})
 
 class ListenSkipClicked(APIView):
 	def post(self,request):
@@ -207,9 +263,9 @@ class ListenSkipClicked(APIView):
 		if check[1]:
 			listen = Listen.objects.get(pk=kwargs['listen_id'])
 			listen_click = ListenClick.objects.create(user=user,listen=listen,skipped_flag=True,time_clicked=kwargs['time_clicked'])
-			return Response({"valid":True,"message":"success","listen_id":listen.pk})
+			return Response({"valid":True,"data":None})
 		else:
-			return Response(check[0])
+			return Response({"valid":False,"message":check[0]})
 
 class PushNotificationObjectCall(APIView):
 

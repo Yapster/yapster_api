@@ -527,7 +527,7 @@ class UserFunctions(models.Model):
 
 	def listen(self, yap,longitude=None,latitude=None):
 		'''like the yap if it hasn't been liked by the user. Return the like object.'''
-		obj = Listen.objects.create(yap=yap,user=self.user,reyap_flag=False) 
+		obj = Listen.objects.create(yap=yap,user=self.user) 
 		return obj
 
 	def list_of_subscriber_users(self,amount=None,after=None,queryset=False):
@@ -552,48 +552,29 @@ class UserFunctions(models.Model):
 			subscribed = [subscribed_libraries.subscribed_library for subscribed_libraries in self.user.subscribed_libraries.filter(is_unsubscribed=False,is_active=True,date_created__lt=dateutil.parser.parse(after))[:amount]]
 		return subscribed
 
-	def subscribe_user(self, subscribing_user_id,facebook_share_flag=False,facebook_access_token=None):
-		subscriber = self.user
-		if subscriber.pk == subscribing_user_id:
-			return 'You cannot subscribe yourself'
-		try:
-			subscribing = User.objects.get(pk=subscribing_user_id)
-		except User.DoesNotExist:
-			return 'User DoesNotExist'
-		request = SubscribeUser.objects.get_or_create(user=subscriber,subscribed_user=subscribing)
-		return 'Success'
+	def subscribe_user(self, user_to_subscribe,facebook_share_flag=False,facebook_access_token=None):
+		request = SubscribeUser.objects.get_or_create(user=self.user,subscribed_user=user_to_subscribe,is_active=True)
+		return request[0]
 
-	def unsubscribe_user(self, user_unfollowed_id):
+	def unsubscribe_user(self, user_to_unsubscribe):
 		try:
-			unsubscribing_user = User.objects.get(pk=unsubscribing_user_id)
-		except User.DoesNotExist:
-			return 'User DoesNotExist'
-		try:
-			obj = self.user.requests.get(user=self.user,subscribed_user=unsubscribing_user,is_unsubscribed=False,is_active=True)
-		except FollowerRequest.DoesNotExist:
+			obj = self.user.subscribe_user_user.get(subscribed_user=user_to_unsubscribe,is_unsubscribed=False,is_active=True)
+		except SubscribeUser.DoesNotExist:
 			return 'This relationship does not exist.'
 		obj.unsubscribe()
-		return 'This user has successfully been unsubscribed.'
+		return obj
 
-	def subscribe_library(self, subscribing_library_id,facebook_share_flag=False,facebook_access_token=None):
-		try:
-			subscribing_library = Library.objects.get(pk=subscribing_library_id)
-		except Library.DoesNotExist:
-			return 'Library DoesNotExist'
-		request = SubscribeLibrary.objects.get_or_create(user=self.user,subscribed_library=subscribing_library,is_unsubscribed=False,is_active=True)
-		return 'Success'
+	def subscribe_library(self, library,facebook_share_flag=False,facebook_access_token=None):
+		request = SubscribeLibrary.objects.get_or_create(user=self.user,subscribed_library=library,is_unsubscribed=False,is_active=True)
+		return request[0]
 
-	def unsubscribe_library(self, unsubscribing_library_id):
+	def unsubscribe_library(self, library):
 		try:
-			unsubscribing_library = Library.objects.get(pk=unsubscribing_library_id)
-		except User.DoesNotExist:
-			return 'User DoesNotExist'
-		try:
-			obj = self.user.subscribed_libraries.get(user=self.user,subscribed_library=unsubscribing_library,is_unsubscribed=False,is_active=True)
+			obj = self.user.subscribed_libraries.get(user=self.user,subscribed_library=library,is_unsubscribed=False,is_active=True)
 		except SubscribeLibrary.DoesNotExist:
 			return 'This subscription does not exist.'
-		obj.unfollow()
-		return 'This library has successfully been unsubscribed.'
+		obj.unsubscribe()
+		return obj
 
 	def load_libraries(self,amount,after_library=None):
 		#after is a datetime

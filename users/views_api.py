@@ -17,6 +17,8 @@ from recommendating_users import recommended_users_to_follow_according_to_questi
 import facebook as facebook
 import twitter as twitter
 import random
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
 
 @api_view(['PUT'])
 def session_id(request):
@@ -218,15 +220,37 @@ class LoadDashboardSubscribedUsers(APIView):
 		user = User.objects.get(pk=request['user_id'])
 		check = check_session(user,request.pop('session_id'))
 		if check[1]:
+			# start = datetime.datetime.now()
 			dashboard = Dashboard.objects.get(user=user,is_active=True)
-			if dashboard.check_date_calculated_subscribed_most_listened_users() == False:
-				dashboard.recalculate_subscribed_most_listened_users()
-			dashboard_users_subscribed = dashboard.subscribed_most_listened_users.all()
-			print dashboard_users_subscribed
-			serialized = SubscribedUserSerializer(dashboard_users_subscribed,many=True,data=self.request.DATA,context={'user':user})
-			return Response(serialized.data)
+			if 'page' in request:
+				page = request.get('page')
+				amount = request.get('amount')
+				before_for_loop_1 = datetime.datetime.now()
+				# print "before for loop_1 " + str(before_for_loop_1 - start)
+				subscribed_users = [sub_user.subscribed_user for sub_user in SubscribeUser.objects.filter(user=user,is_active=True)]
+				after_subscribed_users = datetime.datetime.now()
+				# print "after_for_loop_1 " + str(after_subscribed_users - before_for_loop_1)
+				paginator = Paginator(object_list=subscribed_users,per_page=amount,allow_empty_first_page=False)
+				try:
+					dashboard_users_subscribed = paginator.page(page)
+				except PageNotAnInteger:
+					# If page is not an integer, deliver first page.
+					return Response({"valid":False,"message":"Page is not an integer."})
+				except EmptyPage:
+					# If page is out of range (e.g. 9999), deliver last page of results.
+					return Response({"valid":True,"data":None})
+			else:
+				if dashboard.check_date_calculated_subscribed_most_listened_users() == False:
+					dashboard.recalculate_subscribed_most_listened_users()
+				after_subscribed_users = datetime.datetime.now()
+				# print "after_for_loop_1" + str(after_subscribed_users - start)
+				dashboard_users_subscribed = dashboard.subscribed_most_listened_users.all()
+			serialized = UserSerializer(dashboard_users_subscribed,many=True,data=self.request.DATA,context={'user':user})
+			end = datetime.datetime.now()
+			# print "After serializerd " + str(end-after_subscribed_users)
+			return Response({"valid":True,"data":serialized.data})
 		else:
-			return Response(check[0])
+			return Response({"valid":False,"message":check[0]})
 
 class LoadDashboardSubscribedLibraries(APIView):
 
@@ -236,13 +260,27 @@ class LoadDashboardSubscribedLibraries(APIView):
 		check = check_session(user,request.pop('session_id'))
 		if check[1]:
 			dashboard = Dashboard.objects.get(user=user,is_active=True)
-			if dashboard.check_date_calculated_subscribed_most_listened_libraries() == False:
-				dashboard.recalculate_subscribed_most_listened_libraries()
-			dashboard_libraries_subscribed = dashboard.subscribed_most_listened_libraries.all()
-			serialized = SubscribedLibrarySerializer(dashboard_libraries_subscribed,many=True,data=self.request.DATA,context={'user':user})
-			return Response(serialized.data)
+			if 'page' in request:
+				page = request.get('page')
+				amount = request.get('amount')
+				subscribed_libraries = [sub_library.subscribed_library for sub_library in SubscribeLibrary.objects.filter(user=user,is_active=True)]
+				paginator = Paginator(object_list=subscribed_libraries,per_page=amount,allow_empty_first_page=False)
+				try:
+					dashboard_libraries_subscribed = paginator.page(page)
+				except PageNotAnInteger:
+					# If page is not an integer, deliver first page.
+					return Response({"valid":False,"message":"Page is not an integer."})
+				except EmptyPage:
+					# If page is out of range (e.g. 9999), deliver last page of results.
+					return Response({"valid":True,"data":None})
+			else:
+				if dashboard.check_date_calculated_subscribed_most_listened_libraries() == False:
+					dashboard.recalculate_subscribed_most_listened_libraries()
+				dashboard_libraries_subscribed = dashboard.subscribed_most_listened_libraries.all()
+			serialized = LibraryPreviewSerializer(dashboard_libraries_subscribed,many=True,data=self.request.DATA,context={'user':user})
+			return Response({"valid":True,"data":serialized.data})
 		else:
-			return Response(check[0])
+			return Response({"valid":False,"message":check[0]})
 
 class LoadDashboardExploreUsers(APIView):
 
@@ -252,13 +290,37 @@ class LoadDashboardExploreUsers(APIView):
 		check = check_session(user,request.pop('session_id'))
 		if check[1]:
 			dashboard = Dashboard.objects.get(user=user,is_active=True)
-			if dashboard.check_date_calculated_explore_top_users() == False:
-				dashboard.recalculate_explore_top_users()
-			dashboard_users_subscribed = dashboard.explore_top_users.all()
-			serialized = SubscribedUserSerializer(dashboard_users_subscribed,many=True,data=self.request.DATA,context={'user':user})
-			return Response(serialized.data)
+			if 'page' in request:
+				page = request.get('page')
+				amount = request.get('amount')
+				minutes = 2880
+				time = datetime.datetime.now() - datetime.timedelta(minutes=minutes)
+				yaps = Yap.objects.filter(is_active=True,date_created__gte=time)
+				users = User.objects.filter(yaps__in=yaps,is_active=True)
+				if user.listens.filter(is_active=True).exists() == True:
+					key = listening_score_for_users
+					reverse = True
+				else:
+					key = lambda *args: random.random()
+					reverse = False
+				explore_users = sorted(set(users),key=key, reverse=reverse)[:30]
+				paginator = Paginator(object_list=explore_users,per_page=amount,allow_empty_first_page=False)
+				try:
+					dashboard_users_explored = paginator.page(page)
+				except PageNotAnInteger:
+					# If page is not an integer, deliver first page.
+					return Response({"valid":False,"message":"Page is not an integer."})
+				except EmptyPage:
+					# If page is out of range (e.g. 9999), deliver last page of results.
+					return Response({"valid":True,"data":None})
+			else:
+				if dashboard.check_date_calculated_explore_top_users() == False:
+					dashboard.recalculate_explore_top_users()
+				dashboard_users_explored = dashboard.explore_top_users.all()
+			serialized = UserSerializer(dashboard_users_explored,many=True,data=self.request.DATA,context={'user':user})
+			return Response({"valid":True,"data":serialized.data})
 		else:
-			return Response(check[0])
+			return Response({"valid":False,"message":check[0]})
 
 class LoadDashboardExploreLibraries(APIView):
 
@@ -268,15 +330,39 @@ class LoadDashboardExploreLibraries(APIView):
 		check = check_session(user,request.pop('session_id'))
 		if check[1]:
 			dashboard = Dashboard.objects.get(user=user,is_active=True)
-			if dashboard.check_date_calculated_explore_top_libraries() == False:
-				dashboard.recalculate_subscribed_top_libraries()
-			dashboard_libraries_subscribed = dashboard.explore_top_libraries.all()
-			serialized = SubscribedLibrarySerializer(dashboard_libraries_subscribed,many=True,data=self.request.DATA,context={'user':user})
-			return Response(serialized.data)
+			if 'page' in request:
+				page = request.get('page')
+				amount = request.get('amount')
+				minutes = 2880
+				time = datetime.datetime.now() - datetime.timedelta(minutes=minutes)
+				yaps = Yap.objects.filter(is_active=True,date_created__gte=time)
+				libraries = Library.objects.filter(yaps__in=yaps,is_active=True)
+				if self.user.listens.filter(is_active=True).exists() == True:
+					key = listening_score_for_libraries
+					reverse = True
+				else:
+					key = lambda *args: random.random()
+					reverse = False
+				explore_top_libraries = sorted(set(libraries),key=key,reverse=reverse)[:30]
+				paginator = Paginator(object_list=explore_top_libraries,per_page=amount,allow_empty_first_page=False)
+				try:
+					dashboard_libraries_explored = paginator.page(page)
+				except PageNotAnInteger:
+					# If page is not an integer, deliver first page.
+					return Response({"valid":False,"message":"Page is not an integer."})
+				except EmptyPage:
+					# If page is out of range (e.g. 9999), deliver last page of results.
+					return Response({"valid":True,"data":None})
+			else:
+				if dashboard.check_date_calculated_explore_top_libraries() == False:
+					dashboard.recalculate_subscribed_top_libraries()
+				dashboard_libraries_explored = dashboard.explore_top_libraries.all()
+			serialized = LibraryPreviewSerializer(dashboard_libraries_subscribed,many=True,data=self.request.DATA,context={'user':user})
+			return Response({"valid":True,"data":serialized.data})
 		else:
-			return Response(check[0])
+			return Response({"valid":False,"message":check[0]})
 
-class LoadProfile(APIView):
+class LoadProfileInfo(APIView):
 
 	def post(self,request,format=None):
 		request = {k:v for k,v in request.DATA.iteritems()}
@@ -284,10 +370,85 @@ class LoadProfile(APIView):
 		check = check_session(user,request.pop('session_id'))
 		if check[1]:
 			profile_user = User.objects.get(pk=request['profile_user_id'])
-			serialized = ProfileSerializer(profile_user,data=self.request.DATA,context={'user':user})
-			return Response(serialized.data)
+			serialized = UserSerializer(profile_user,data=self.request.DATA,context={'user':user})
+			return Response({"valid":True,"data":serialized.data})
 		else:
-			return Response(check[0])
+			return Response({"valid":False,"message":check[0]})
+
+class LoadProfileLibraries(APIView):
+
+	def post(self,request,format=None):
+		request = {k:v for k,v in request.DATA.iteritems()}
+		user = User.objects.get(pk=request.pop('user_id'))
+		check = check_session(user,request.pop('session_id'))
+		if check[1]:
+			profile_user = User.objects.get(pk=request['profile_user_id'])
+			page = request.get('page',1)
+			amount = request.get('amount',5)
+			libraries = [lib_order.library for lib_order in profile_user.library_order.filter(is_active=True).order_by('-order')][:amount]
+			paginator = Paginator(object_list=libraries,per_page=amount,allow_empty_first_page=False)
+			try:
+				profile_libraries = paginator.page(page)
+			except PageNotAnInteger:
+				# If page is not an integer, deliver first page.
+				return Response({"valid":False,"message":"Page is not an integer."})
+			except EmptyPage:
+				# If page is out of range (e.g. 9999), deliver last page of results.
+				return Response({"valid":True,"data":None})
+			serialized = LibraryPreviewSerializer(profile_libraries,many=True,data=self.request.DATA,context={'user':user})
+			return Response({"valid":True,"data":serialized.data})
+		else:
+			return Response({"valid":False,"message":check[0]})
+
+class LoadLibraryInfo(APIView):
+
+	def post(self,request,format=None):
+		request = {k:v for k,v in request.DATA.iteritems()}
+		user = User.objects.get(pk=request.pop('user_id'))
+		check = check_session(user,request.pop('session_id'))
+		if check[1]:
+			profile_user = User.objects.get(pk=request['profile_user_id'])
+			page = request.get('page',1)
+			amount = request.get('amount',5)
+			libraries = [lib_order.library for lib_order in profile_user.library_order.filter(is_active=True).order_by('-order')][:amount]
+			paginator = Paginator(object_list=libraries,per_page=amount,allow_empty_first_page=False)
+			try:
+				profile_libraries = paginator.page(page)
+			except PageNotAnInteger:
+				# If page is not an integer, deliver first page.
+				return Response({"valid":False,"message":"Page is not an integer."})
+			except EmptyPage:
+				# If page is out of range (e.g. 9999), deliver last page of results.
+				return Response({"valid":True,"data":None})
+			serialized = LibraryPreviewSerializer(profile_libraries,many=True,data=self.request.DATA,context={'user':user})
+			return Response({"valid":True,"data":serialized.data})
+		else:
+			return Response({"valid":False,"message":check[0]})
+
+class LoadLibraryYaps(APIView):
+
+	def post(self,request,format=None):
+		request = {k:v for k,v in request.DATA.iteritems()}
+		user = User.objects.get(pk=request.pop('user_id'))
+		check = check_session(user,request.pop('session_id'))
+		if check[1]:
+			library = User.objects.get(pk=request['library_id'])
+			page = request.get('page',1)
+			amount = request.get('amount',5)
+			yaps_list = [yp_order.yap for yp_order in library.library_yap_order.filter(is_active=True).order_by('-order')][:amount]
+			paginator = Paginator(object_list=yaps_list,per_page=amount,allow_empty_first_page=False)
+			try:
+				yaps = paginator.page(page)
+			except PageNotAnInteger:
+				# If page is not an integer, deliver first page.
+				return Response({"valid":False,"message":"Page is not an integer."})
+			except EmptyPage:
+				# If page is out of range (e.g. 9999), deliver last page of results.
+				return Response({"valid":True,"data":None})
+			serialized = AbstractYapSerializer(yaps,many=True,data=self.request.DATA,context={'user':user})
+			return Response({"valid":True,"data":serialized.data})
+		else:
+			return Response({"valid":False,"message":check[0]})
 
 class LoadSettings(APIView):
 
@@ -424,7 +585,7 @@ class EditSettings(APIView):
 					if 'twitter_access_token_key' in kwargs:
 						if 'twitter_access_token_secret' in kwargs:
 							twitter_access_token_key = kwargs.pop('twitter_access_token_key')
-							twitter_access_token_secret = kwargs.pop('twitter_access_token_secret')
+							twitter_access_token_secret = kwargs.pop('twitter_access_tHoken_secret')
 						else:
 							return Response({"valid":False,"message":"There must be both twitter_access_token_key and twitter_access_token_secret to connect and share to Twitter. "})
 					else:

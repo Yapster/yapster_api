@@ -153,6 +153,13 @@ yap_images = [
 	'misc/twins4.jpg',	
 ]
 
+web_cover_pictures = [
+	'misc/webcoverpicture1.jpg',
+	'misc/webcoverpicture2.jpg',
+	'misc/webcoverpicture3.jpg',
+	'misc/webcoverpicture4.jpg',	
+]
+
 audio_paths = [
 	'misc/ashlee_1.mp3', 
 	'misc/gurkaran_1.mp3',
@@ -820,14 +827,21 @@ def correct_subscriptions_library():
 correct_subscriptions_library()
 
 #'''
-
+'''
 def change_path_of_all_yap():
-
-	libraries = Library.objects.all()
-	for library in libraries:
-		library.picture_path = random.choice(yap_images)
-		library.picture_cropped_path = library.picture_path
-		library.save()
+	print "in the function"
+	if random.random() < 0.50:
+		users = User.objects.all()
+		for user in users:
+			print user.pk
+			user.profile.web_cover_picture_1_flag = True
+			user.profile.web_cover_picture_1_path = random.choice(profile_pictures)
+			user.profile.save()
+			userInfo = UserInfo.objects.get(pk=user.pk)
+			userInfo.web_cover_picture_1_flag = True
+			userInfo.web_cover_picture_1_path = user.profile.web_cover_picture_1_path
+			userInfo.save()
+			print "done"
 
 change_path_of_all_yap()
-
+#'''

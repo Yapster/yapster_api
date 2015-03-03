@@ -20,7 +20,7 @@ class LoadUSStates(APIView):
 	def post(self,request):
 		request = {k:v for k,v in request.DATA.iteritems()}
 		country_id = request['country_id']
-		us_country = Country.objects.get(country_name='United States')
+		us_country = Country.objects.get(name='United States')
 		print us_country.pk
 		if country_id == us_country.pk:
 			us_states = USState.objects.all()
