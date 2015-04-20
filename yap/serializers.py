@@ -90,7 +90,7 @@ class UserSerializer(serializers.ModelSerializer):
 	def get_viewing_user_is_user_extra_info(self,obj):
 		user = self.context['user']
 		if user == None:
-			return False
+			return None
 		else:
 			if obj.pk == user.pk:
 				return {"facebook_connection_flag":obj.settings.facebook_connection_flag, "facebook_account_id":obj.settings.facebook_account_id,"facebook_page_connection_flag":obj.settings.facebook_page_connection_flag,"facebook_page_id":obj.settings.facebook_page_id, "twitter_connection_flag":obj.settings.twitter_connection_flag, "twitter_account_id":obj.settings.twitter_account_id,"last_yap_user_yap_id":obj.functions.last_yap_user_yap_id()}

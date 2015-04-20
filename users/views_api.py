@@ -400,56 +400,6 @@ class LoadProfileLibraries(APIView):
 		else:
 			return Response({"valid":False,"message":check[0]})
 
-class LoadLibraryInfo(APIView):
-
-	def post(self,request,format=None):
-		request = {k:v for k,v in request.DATA.iteritems()}
-		user = User.objects.get(pk=request.pop('user_id'))
-		check = check_session(user,request.pop('session_id'))
-		if check[1]:
-			profile_user = User.objects.get(pk=request['profile_user_id'])
-			page = request.get('page',1)
-			amount = request.get('amount',5)
-			libraries = [lib_order.library for lib_order in profile_user.library_order.filter(is_active=True).order_by('-order')][:amount]
-			paginator = Paginator(object_list=libraries,per_page=amount,allow_empty_first_page=False)
-			try:
-				profile_libraries = paginator.page(page)
-			except PageNotAnInteger:
-				# If page is not an integer, deliver first page.
-				return Response({"valid":False,"message":"Page is not an integer."})
-			except EmptyPage:
-				# If page is out of range (e.g. 9999), deliver last page of results.
-				return Response({"valid":True,"data":None})
-			serialized = LibraryPreviewSerializer(profile_libraries,many=True,data=self.request.DATA,context={'user':user})
-			return Response({"valid":True,"data":serialized.data})
-		else:
-			return Response({"valid":False,"message":check[0]})
-
-class LoadLibraryYaps(APIView):
-
-	def post(self,request,format=None):
-		request = {k:v for k,v in request.DATA.iteritems()}
-		user = User.objects.get(pk=request.pop('user_id'))
-		check = check_session(user,request.pop('session_id'))
-		if check[1]:
-			library = User.objects.get(pk=request['library_id'])
-			page = request.get('page',1)
-			amount = request.get('amount',5)
-			yaps_list = [yp_order.yap for yp_order in library.library_yap_order.filter(is_active=True).order_by('-order')][:amount]
-			paginator = Paginator(object_list=yaps_list,per_page=amount,allow_empty_first_page=False)
-			try:
-				yaps = paginator.page(page)
-			except PageNotAnInteger:
-				# If page is not an integer, deliver first page.
-				return Response({"valid":False,"message":"Page is not an integer."})
-			except EmptyPage:
-				# If page is out of range (e.g. 9999), deliver last page of results.
-				return Response({"valid":True,"data":None})
-			serialized = AbstractYapSerializer(yaps,many=True,data=self.request.DATA,context={'user':user})
-			return Response({"valid":True,"data":serialized.data})
-		else:
-			return Response({"valid":False,"message":check[0]})
-
 class LoadSettings(APIView):
 
 	def post(self,request,**kwargs):
@@ -495,29 +445,45 @@ class EditProfile(APIView):
 		user = User.objects.get(pk=kwargs.pop('user_id'))
 		check = check_session(user=user,session_id=kwargs.pop('session_id'))
 		if check[1]:
-			if kwargs.get('country_id'):
-				try:
-					country = Country.objects.get(pk=kwargs.pop('country_id'))
-				except ObjectDoesNotExist:
-					return Response({"valid":False,"message":"The country you have selected doesn't exist."})
-				kwargs['country'] = country
-			if kwargs.get('us_state_id') and country.country_name == "United States":
-				try:
-					us_state = USState.objects.get(pk=kwargs.pop('us_state_id'))
-				except ObjectDoesNotExist:
-					return Response({"valid":False,"message":"The US State you have selected doesn't exist."})
-				kwargs['us_state'] = us_state
-			if kwargs.get('us_zip_code'):
-				try:
-					us_zip_code = USZIPCode.objects.get(us_zip_code=kwargs.pop('us_zip_code'))
-				except ObjectDoesNotExist:
-					return Response({"valid":False,"message":"The ZIP Code you have selected doesn't exist."})
-				kwargs['us_zip_code'] = us_zip_code
-			if kwargs.get('city_name') or kwargs.get('city_name') == '':
-				if country.country_name == "United States" and kwargs.get('us_state',None) and kwargs.get('us_zip_code',None):
-					city = City.objects.get_or_create(city_name=kwargs.pop('city_name'),us_state=us_state,country=country,us_zip_code=us_zip_code,is_active=True)
+			if kwargs.get('country'):
+				country = kwargs.get('country')
+				if country == "":
+					kwargs['country'] = None
 				else:
-					city = City.objects.get_or_create(city_name=kwargs.pop('city_name'),country=country,is_active=True)
+					try:
+						country = Country.objects.get(name=kwargs.pop('country'))
+					except ObjectDoesNotExist:
+						return Response({"valid":False,"message":"The country you have selected doesn't exist."})
+					kwargs['country'] = country
+			if kwargs.get('us_zip_code'):
+				us_zip_code = kwargs.get('us_zip_code')
+				if us_zip_code == "":
+					kwargs['us_zip_code'] = None
+				else:
+					try:
+						us_zip_code = USZIPCode.objects.get(name=kwargs.pop('us_zip_code'))
+					except ObjectDoesNotExist:
+						return Response({"valid":False,"message":"The ZIP Code you have selected doesn't exist."})
+					kwargs['us_zip_code'] = us_zip_code
+			if kwargs.get("us_state") and kwargs.get('us_zip_code') and country.country_name == "United States":
+				us_state = kwargs.get("us_state")
+				if us_state == "":
+					kwargs['us_state'] = None
+				else:
+					try:
+						us_state = USState.objects.get(pk=kwargs.pop('us_state_name'))
+					except ObjectDoesNotExist:
+						return Response({"valid":False,"message":"The US State you have selected doesn't exist."})
+					kwargs['us_state'] = us_state
+			if kwargs.get('city'):
+				city = kwargs.get('city')
+				if city == "":
+					kwargs['city'] = None
+				else:
+					if country.name == "United States" and kwargs.get('us_state',None) and kwargs.get('us_zip_code',None):
+						city = City.objects.get_or_create(name=kwargs.pop('city'),us_state=us_state,country=country,us_zip_code=us_zip_code,is_active=True)
+					else:
+						city = City.objects.get_or_create(name=kwargs.pop('city'),country=country,is_active=True)
 				kwargs['city'] = city[0]
 			info1 = UserInfo.objects.get(username=user.username)
 			info2 = info1.modify_account(**kwargs)

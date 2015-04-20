@@ -38,10 +38,16 @@ class DefaultSearch(APIView):
 			latitude = request.get("latitude", None)
 			if screen == "dashboard_subscribed":
 				search = Search.objects.create(user=user,origin_dashboard_subscribed_screen_flag=True,text=text,latitude=latitude,longitude=longitude)
+			elif screen == "dashboard_subscribed_view_all_users":
+				search = Search.objects.create(user=user,origin_dashboard_subscribed_view_all_users_screen_flag=True,text=text,latitude=latitude,longitude=longitude)
+			elif screen == "dashboard_subscribed_view_all_libraries":
+				search = Search.objects.create(user=user,origin_dashboard_subscribed_view_all_libraries_screen_flag=True,text=text,latitude=latitude,longitude=longitude)
 			elif screen == "dashboard_explore":
 				search = Search.objects.create(user=user,origin_dashboard_explore_screen_flag=True,text=text,latitude=latitude,longitude=longitude)
-			elif screen == "dashboard_subscribed_view_all":			
-				search = Search.objects.create(user=user,origin_dashboard_subscribed_view_all_screen_flag=True,text=text,latitude=latitude,longitude=longitude)
+			elif screen == "dashboard_explore_view_all_users":
+				search = Search.objects.create(user=user,origin_dashboard_explore_view_all_users_screen_flag=True,text=text,latitude=latitude,longitude=longitude)
+			elif screen == "dashboard_explore_view_all_libraries":
+				search = Search.objects.create(user=user,origin_dashboard_explore_view_all_libraries_screen_flag=True,text=text,latitude=latitude,longitude=longitude)
 			elif screen == "dashboard_explore_view_all":
 				search = Search.objects.create(user=user,origin_dashboard_explore_view_all_screen_flag=True,text=text,latitude=latitude,longitude=longitude)
 			elif screen == "profile":
@@ -55,7 +61,7 @@ class DefaultSearch(APIView):
 		amount = request.get('amount',5)
 		if search_type == "all":
 			serialized = SearchResultsSerializer(search,context={'user':user})
-			return Response({"valid":True,"data":serialized.data})
+			return Response({"valid":True,"search_id":search.pk,"data":serialized.data})
 		elif search_type == "users":
 			search_results = search.default_user_search()
 		elif search_type == "libraries":
@@ -77,7 +83,7 @@ class DefaultSearch(APIView):
 			serialized = LibraryPreviewSerializer(results,many=True,context={'user':user})
 		elif search_type == "yaps":
 			serialized = AbstractYapSerializer(results,many=True,context={'user':user})
-		return Response({"valid":True,"data":serialized.data,"search_id":search.pk})
+		return Response({"valid":True,"search_id":search.pk,"data":serialized.data})
 
 class ExploreScreenStatistics(APIView):
 

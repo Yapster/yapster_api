@@ -73,7 +73,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 	def get_viewing_user_is_user_extra_info(self,obj):
 		user = self.context['user']
 		if user == None:
-			return False
+			return None
 		else:
 			if obj.user.pk == user.pk:
 				return None

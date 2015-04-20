@@ -862,6 +862,9 @@ class Dashboard(models.Model):
 def yap_deleted(sender, **kwargs):
 	yap = kwargs.get("yap")
 	#Delete All The Listens With This Yap
+	yaps_order_objects_with_this_yap = LibraryYapOrder.objects.filter(is_active=True,yap=yap)
+	for yap_order_objects_with_this_yap in yaps_order_objects_with_this_yap:
+		yap_order_objects_with_this_yap.delete(is_user_deleted=yap.is_user_deleted)
 	listens_with_this_yap = Listen.objects.filter(yap=yap,is_active=True)
 	for listen in listens_with_this_yap:
 		listen.delete(is_user_deleted=yap.is_user_deleted)

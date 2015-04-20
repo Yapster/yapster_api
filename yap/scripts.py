@@ -16,7 +16,7 @@ def create_yap(user,title,description,length,audio_path,library,picture_flag=Fal
 			user_tag = user_tag_for_this_yap[:0] + user_tag_for_this_yap[1:]
 			user_tags.append(user_tag)
 	if len(set(hashtags_for_this_yap)) == 0:
-		hashtags_flag = Falseanis
+		hashtags_flag = False
 	elif len(set(hashtags_for_this_yap)) > 0:
 		hashtags_flag = True
 		hashtags = []

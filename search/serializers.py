@@ -21,7 +21,7 @@ class SearchResultsSerializer(serializers.Serializer):
 		return LibraryPreviewSerializer(obj.default_library_search(amount=5),many=True,context={'user':self.context['user']}).data
 
 	def get_yaps_searched(self,obj):
-		return YapSerializer(obj.default_yap_search(amount=5),many=True,context={'user':self.context['user']}).data
+		return AbstractYapSerializer(obj.default_yap_search(amount=5),many=True,context={'user':self.context['user']}).data
 
 
 class ExploreScreenStatisticsSerializer(serializers.Serializer):

@@ -20,6 +20,7 @@ import ast
 import datetime
 import dateutil.parser
 
+
 class DeactivatedUserLog(models.Model):
 	user_deactivated_user_log_id = models.BigIntegerField(default=1)
 	user = models.ForeignKey(User,related_name="deactivate_user_logs")
@@ -244,10 +245,6 @@ class UserInfo(models.Model):
 			return 'UserInfo is already activated.'
 
 	def modify_account(self,**kwargs):
-		'''
-		the keyword arguments must be named the names of the models or else a value error is raised
-
-		'''
 		if 'facebook_connection_flag' in kwargs:
 			if kwargs.get('facebook_connection_flag') == True:
 				if 'facebook_access_token' in kwargs:
@@ -281,16 +278,18 @@ class UserInfo(models.Model):
 				return 'This username is unavailable.'
 			if BlackList.objects.filter(username=username).exists() == True:
 				return 'This username is currently unavailable. Please contact Yapster for more information about creating this account.'
-
-		if kwargs.get("user_country_id") == True and not self.user_country.country_name == "United States":
-			kwargs['user_us_state'] = ''
-		if kwargs.get("user_us_zip_code") == '':
-			user_us_zip_code = None
-			kwargs['user_us_zip_code'] = user_us_zip_code
+		if kwargs.get("country") == True and not self.country.country_name == "United States":
+			kwargs['us_state'] = ''
+			kwargs['us_zip_code'] = ''
+		if kwargs.get("us_zip_code") == '':
+			us_zip_code = None
+			kwargs['us_zip_code'] = us_zip_code
 		fields = self._meta.get_all_field_names()
 		for item in kwargs.iteritems():
 			field = item[0]
 			change = item[1]
+			if str(change) == "":
+				change = None
 			if field not in fields:
 				raise ValueError("%s is not an option for UserInfo" % (field))
 			else:
@@ -526,7 +525,6 @@ class UserFunctions(models.Model):
 			return 'This UserFunctions is already activated.'
 
 	def listen(self, yap,longitude=None,latitude=None):
-		'''like the yap if it hasn't been liked by the user. Return the like object.'''
 		obj = Listen.objects.create(yap=yap,user=self.user) 
 		return obj
 
@@ -803,7 +801,7 @@ def modify_information(sender,**kwargs):
 		"city",
 		"us_state",
 		"us_zip_code",
-		"user_country",
+		"country",
 		"phone_number",
 		"high_security_account_flag",
 		"verified_account_flag",
@@ -827,18 +825,23 @@ def modify_information(sender,**kwargs):
 	for k,v in kwargs.iteritems():
 		if k in user:
 			user_changes.append(k)
+			if str(v) == "":
+				v = None
 			setattr(user_obj,k,v)
 		elif k in profile:
+			if str(v) == "":
+				v = None
 			profile_changes.append(k)
 			setattr(profile_obj,k,v)
 		if k in settings:
+			if str(v) == "":
+				v = None
 			settings_changes.append(k)
 			setattr(settings_obj,k,v)			
 	if profile_changes != []:		
 		profile_obj.save(update_fields=profile_changes)
 	if settings_changes != []:
 		settings_obj.save(update_fields=settings_changes)
-	print user_changes
 	if user_changes !=[]:
 		user_obj.save(update_fields=user_changes)
 
